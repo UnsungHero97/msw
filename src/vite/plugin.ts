@@ -6,6 +6,7 @@ const WORKER_FILENAME = 'mockServiceWorker.js'
 const WORKER_SCRIPT_PATH = new URL('../mockServiceWorker.js', import.meta.url)
 const VIRTUAL_MODULE_ID = 'virtual:msw'
 const RUNTIME_PATH = fileURLToPath(new URL('./runtime.js', import.meta.url))
+const VITEST_BROWSER_PLUGIN_PREFIX = 'vitest:browser'
 
 export interface MswPluginOptions {
   /**
@@ -49,6 +50,7 @@ export function msw(options: MswPluginOptions = {}): Plugin {
   const mode = options.mode ?? 'auto'
   let workerUrl = `/${WORKER_FILENAME}`
   const environmentsUsingNetwork = new Set<string>()
+  let isVitestBrowserMode = false
 
   return {
     name: 'msw',
@@ -79,10 +81,14 @@ export const network = await createNetwork(defaultNetworkOptions)
 
       environmentsUsingNetwork.add(this.environment.name)
 
+      const createDefaultNetworkOptionsParams = isVitestBrowserMode
+        ? `${JSON.stringify(workerUrl)}, { serviceWorker: false }`
+        : JSON.stringify(workerUrl)
+
       return `
 import { createDefaultNetworkOptions } from 'msw/browser'
 import { createNetwork } from ${JSON.stringify(RUNTIME_PATH)}
-export const network = await createNetwork(createDefaultNetworkOptions(${JSON.stringify(workerUrl)}))
+export const network = await createNetwork(createDefaultNetworkOptions(${createDefaultNetworkOptionsParams}))
 `
     },
     configResolved(config) {
@@ -92,6 +98,9 @@ export const network = await createNetwork(createDefaultNetworkOptions(${JSON.st
           ? config.base
           : new URL(config.base, 'http://localhost').pathname
       workerUrl = `${base}${WORKER_FILENAME}`
+      isVitestBrowserMode = config.plugins.some((plugin) =>
+        plugin.name.startsWith(VITEST_BROWSER_PLUGIN_PREFIX),
+      )
     },
     generateBundle() {
       if (this.environment.config.consumer !== 'client') {

@@ -10,12 +10,13 @@ import { supportsServiceWorker } from './utils/supports'
 
 export function createDefaultNetworkOptions(
   workerUrl = '/mockServiceWorker.js',
+  { useServiceWorker }: { useServiceWorker?: boolean } = {},
 ): DefineNetworkOptions<
   [ServiceWorkerSource | FallbackHttpSource, InterceptorSource]
 > {
   return {
     sources: [
-      supportsServiceWorker()
+      useServiceWorker !== false && supportsServiceWorker()
         ? new ServiceWorkerSource({ serviceWorker: { url: workerUrl } })
         : new FallbackHttpSource(),
       new InterceptorSource({

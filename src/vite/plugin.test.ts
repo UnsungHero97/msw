@@ -678,6 +678,48 @@ document.querySelector('button').onclick = async () => {
   await expect.poll(() => page.locator('output').textContent()).toBe('override')
 }, 20_000)
 
+test('creates a browser network with the service worker by default', async () => {
+  const server = await createServer({
+    configFile: false,
+    logLevel: 'silent',
+    plugins: [msw()],
+    resolve: { alias: mswExports },
+    root: fsMock.resolve('.'),
+    server: { middlewareMode: true },
+  })
+  await using _ = {
+    [Symbol.asyncDispose]: server.close.bind(server),
+  }
+
+  const result =
+    await server.environments.client.transformRequest('virtual:msw')
+
+  expect(result?.code).toContain(
+    'createDefaultNetworkOptions("/mockServiceWorker.js")',
+  )
+})
+
+test('creates a browser network without the service worker alongside vitest browser mode', async () => {
+  const server = await createServer({
+    configFile: false,
+    logLevel: 'silent',
+    plugins: [msw(), { name: 'vitest:browser:tests' }],
+    resolve: { alias: mswExports },
+    root: fsMock.resolve('.'),
+    server: { middlewareMode: true },
+  })
+  await using _ = {
+    [Symbol.asyncDispose]: server.close.bind(server),
+  }
+
+  const result =
+    await server.environments.client.transformRequest('virtual:msw')
+
+  expect(result?.code).toContain(
+    'createDefaultNetworkOptions("/mockServiceWorker.js", { useServiceWorker: false })',
+  )
+})
+
 test('serves the worker script without writing files during development', async () => {
   const server = await createServer({
     configFile: false,
