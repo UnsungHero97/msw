@@ -82,7 +82,7 @@ export const network = await createNetwork(defaultNetworkOptions)
       environmentsUsingNetwork.add(this.environment.name)
 
       const createDefaultNetworkOptionsParams = isVitestBrowserMode
-        ? `${JSON.stringify(workerUrl)}, { serviceWorker: false }`
+        ? `${JSON.stringify(workerUrl)}, { useServiceWorker: false }`
         : JSON.stringify(workerUrl)
 
       return `
